@@ -588,10 +588,69 @@ class YFinanceScreenerClient:
         # Combine all sectors
         stocks = tech + financial + healthcare + consumer_disc + consumer_staples + industrials + energy + utilities_re + materials
         
+        # ADD SMALL-CAP AND MID-CAP STOCKS FOR HIDDEN GEMS
+        # These are the types of stocks we want to find!
+        small_mid_caps = [
+            # Small-cap tech
+            'PLTR', 'RBLX', 'U', 'PATH', 'FROG', 'NCNO', 'CFLT', 'ESTC', 'COUP', 'SMAR',
+            'ZI', 'BILL', 'HUBS', 'PLAN', 'DOCU', 'TWLO', 'MDB', 'SNOW', 'NET', 'CRWD',
+            'DDOG', 'ZS', 'OKTA', 'VEEV', 'TEAM', 'WDAY', 'NOW', 'CRM', 'INTU', 'ADBE',
+            
+            # Small-cap biotech & healthcare
+            'MRNA', 'NVAX', 'BNTX', 'GILD', 'BIIB', 'REGN', 'VRTX', 'INCY', 'ALNY', 'BMRN',
+            'RARE', 'FOLD', 'ARWR', 'IONS', 'SRPT', 'EXEL', 'ACAD', 'HALO', 'VIR', 'SAGE',
+            'BLUE', 'EDIT', 'CRSP', 'NTLA', 'BEAM', 'PACB', 'NVTA', 'CDNA', 'FATE', 'CRBU',
+            
+            # Small-cap fintech
+            'SQ', 'SOFI', 'AFRM', 'UPST', 'LC', 'HOOD', 'COIN', 'PYPL', 'TOST', 'PAGS',
+            'MELI', 'NU', 'STNE', 'FLYW', 'TREE', 'ENVA', 'OPRT', 'CACC', 'WRLD', 'FOUR',
+            
+            # Small-cap consumer
+            'PTON', 'CHWY', 'ETSY', 'W', 'CVNA', 'CARG', 'CARS', 'KMX', 'LAD', 'AN',
+            'SFM', 'AAP', 'AZO', 'ORLY', 'ULTA', 'LULU', 'CROX', 'SKX', 'DKS', 'HIBB',
+            
+            # Small-cap industrial & materials
+            'FAST', 'POOL', 'WSO', 'GWW', 'MSM', 'DCI', 'FLOW', 'TTC', 'GATX', 'RAIL',
+            'JBHT', 'SAIA', 'ODFL', 'ARCB', 'WERN', 'LSTR', 'CVLG', 'HUBG', 'CHRW', 'EXPD',
+            
+            # Small-cap energy & utilities
+            'DVN', 'FANG', 'SM', 'RRC', 'AR', 'CLR', 'PDCE', 'MTDR', 'NOG', 'VTLE',
+            'OVV', 'PR', 'MGY', 'CRGY', 'WDS', 'CPE', 'CRC', 'CNX', 'RANGE', 'EQT',
+            
+            # REITs and utilities
+            'O', 'STAG', 'WPC', 'NNN', 'SRC', 'EPRT', 'ADC', 'FCPT', 'STOR', 'SAFE',
+            'PSA', 'EXR', 'CUBE', 'LSI', 'NSA', 'REXR', 'ELS', 'SUI', 'UMH', 'NXRT',
+            
+            # Small-cap miscellaneous 
+            'ZG', 'Z', 'YELP', 'GRUB', 'DASH', 'ABNB', 'LYFT', 'UBER', 'SPOT', 'ROKU',
+            'PINS', 'SNAP', 'TWTR', 'MTCH', 'BMBL', 'APPS', 'MOMO', 'YY', 'HUYA', 'DOYU',
+            
+            # Add Russell 2000 representative small caps
+            'IWM',  # This is the ETF, but we'll add individual small caps
+            'IOVA', 'HZNP', 'ZION', 'FIBK', 'SBCF', 'HOPE', 'CWBC', 'PPBI', 'THFF', 'NRIM',
+            'MATX', 'SAIA', 'ARCB', 'WERN', 'LSTR', 'CVLG', 'HUBG', 'JBSS', 'SNDR', 'GMS',
+            'POOL', 'WSO', 'GWW', 'MSM', 'DCI', 'FLOW', 'TTC', 'GATX', 'RAIL', 'BLDR',
+            'TOL', 'DHI', 'LEN', 'NVR', 'PHM', 'KBH', 'TPH', 'MTH', 'GRBK', 'LGIH',
+            
+            # More small biotechs
+            'AIMT', 'APLS', 'ARCT', 'ARNA', 'ARVN', 'AVRO', 'BEAM', 'BGNE', 'BPMC', 'CARA',
+            'CDNA', 'CGEN', 'CRBU', 'CRNX', 'CRSP', 'CRTX', 'CYCC', 'CYRX', 'EDIT', 'FATE',
+            'FOLD', 'GERN', 'HALO', 'IONS', 'KRYS', 'KURA', 'LGND', 'LPTX', 'MEIP', 'MNTA',
+            'MYGN', 'NKTR', 'NTLA', 'NVTA', 'OCUL', 'PACB', 'PCRX', 'PTCT', 'RARE', 'RGNX',
+            'RLAY', 'RMTI', 'SAGE', 'SGMO', 'SRPT', 'TBIO', 'TCDA', 'TDOC', 'TGTX', 'TWST',
+            'VCYT', 'VIR', 'VRTV', 'XENE', 'XLRN', 'YMAB', 'ZLAB', 'ZYME'
+        ]
+        
+        # Combine with existing stocks
+        stocks = stocks + small_mid_caps
+        
         # Remove duplicates and sort
         stocks = sorted(list(set(stocks)))
         
-        logger.info(f"✓ Expanded universe: {len(stocks)} stocks")
+        logger.info(f"✓ Expanded universe with small-caps: {len(stocks)} stocks")
+        logger.info(f"  - Includes small-cap, mid-cap, and large-cap stocks for hidden gems")
+        logger.info(f"  - DEBUG: First 10 stocks: {stocks[:10]}")
+        logger.info(f"  - DEBUG: Last 10 stocks: {stocks[-10:]}")
         return stocks
     
     def _get_popular_stocks(self) -> List[str]:

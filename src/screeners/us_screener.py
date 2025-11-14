@@ -81,21 +81,27 @@ class USScreener(BaseScreener):
         """
         try:
             if self.api_key:
-                logger.info("Using Yahoo Finance API (primary)...")
+                logger.info(f"✅ Yahoo Finance API key detected: {self.api_key[:8]}...")
+                logger.info("🔄 Using Yahoo Finance API (primary source)...")
                 tickers = self.yahoo_client.screen_stocks(
                     region='US',
                     filters=self.filters,
-                    max_results=self.filters.get('max_stocks_per_scan', 1000)
+                    max_results=self.filters.get('max_stocks_per_scan', 5000)  # Increased for more stocks
                 )
                 
                 if tickers:
                     self._log_results(tickers, "Yahoo API")
                     return tickers
+                else:
+                    logger.warning("⚠️ Yahoo API returned no results, trying fallback...")
             else:
-                logger.info("No API key provided, skipping Yahoo Finance API")
+                logger.warning("❌ No Yahoo Finance API key found!")
+                logger.info("   Create .env file with: YAHOO_FINANCE_API_KEY=your_key")
+                logger.info("   Falling back to free data sources...")
                 
         except Exception as e:
-            logger.error(f"Primary source error: {e}")
+            logger.error(f"❌ Yahoo API error: {e}")
+            logger.info("🔄 Falling back to free data sources...")
         
         return []
     

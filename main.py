@@ -216,6 +216,34 @@ def main():
     # Combine for display (prioritize STRONG_BUY, then BUY, then SPECULATIVE)
     all_recommendation_stocks = strong_buy_stocks + buy_stocks + speculative_stocks
     
+    # If we have too few recommendations, try finding simple gems from filtered stocks
+    if len(all_recommendation_stocks) < 10:
+        logger.info(f"\n💎 Only {len(all_recommendation_stocks)} stocks passed full analysis")
+        logger.info("🔍 Looking for additional hidden gems from filtered stocks...")
+        
+        # Get stocks data for filtered tickers
+        filtered_stocks_data = {}
+        for ticker in filtered_tickers[:50]:  # Check top 50 filtered stocks
+            if ticker not in [s['ticker'] for s in analyzed_stocks]:  # Not already analyzed
+                try:
+                    stock_data = bulk_fetcher._fetch_single(ticker)
+                    if stock_data:
+                        filtered_stocks_data[ticker] = stock_data
+                except:
+                    continue
+        
+        # Find simple gems
+        gem_tickers = bulk_fetcher.find_simple_gems(filtered_stocks_data, max_results=10)
+        
+        logger.info(f"🏆 Found {len(gem_tickers)} additional hidden gems")
+        for i, ticker in enumerate(gem_tickers[:5], 1):
+            data = filtered_stocks_data[ticker]
+            score = bulk_fetcher._simple_gem_score(data)
+            logger.info(f"  {i}. {ticker} - Gem Score: {score:.1f} | "
+                       f"P/E: {data.get('pe_ratio', 'N/A')} | "
+                       f"ROE: {data.get('roe', 'N/A')}% | "
+                       f"MCap: ${data.get('market_cap', 0)/1e6:.0f}M")
+    
     # Rank by composite score within each category
     top_stocks = scorer.rank_stocks(all_recommendation_stocks, by='composite_score')[:args.top_n]
     logger.info(f"Top {len(top_stocks)} recommendations selected")
@@ -247,12 +275,28 @@ def main():
         logger.warning("No results to save")
     
     logger.info(f"\n{'=' * 70}")
-    logger.info("SCREENING COMPLETE!")
+    logger.info("📈 HIDDEN GEMS SUMMARY")
     logger.info('=' * 70)
     logger.info(f"\nTotal Analyzed: {len(analyzed_stocks)} stocks")
-    logger.info(f"BUY/STRONG_BUY: {len(buy_stocks)} stocks")
+    logger.info(f"STRONG_BUY: {len(strong_buy_stocks)} stocks")  
+    logger.info(f"BUY: {len(buy_stocks)} stocks")
+    logger.info(f"SPECULATIVE: {len(speculative_stocks)} stocks")
     logger.info(f"Top Picks: {len(top_stocks)} stocks")
-    logger.info(f"Results saved to: {OUTPUT_DIR}/")
+    logger.info(f"\n💎 FOCUS: Quality over quantity - these are your best opportunities!")
+    logger.info(f"📁 Results saved to: {OUTPUT_DIR}/")
+    
+    # Show key metrics of top picks
+    if top_stocks:
+        logger.info(f"\n🏆 TOP PICKS SUMMARY:")
+        avg_pe = sum(s.get('pe_ratio', 0) for s in top_stocks if s.get('pe_ratio')) / len(top_stocks)
+        avg_roe = sum(s.get('roe', 0) for s in top_stocks if s.get('roe')) / len(top_stocks)
+        avg_mcap = sum(s.get('market_cap', 0) for s in top_stocks) / len(top_stocks) / 1e6
+        
+        logger.info(f"   Average P/E: {avg_pe:.1f}")
+        logger.info(f"   Average ROE: {avg_roe:.1f}%") 
+        logger.info(f"   Average Market Cap: ${avg_mcap:.0f}M")
+        logger.info(f"   Sectors: {', '.join(set(s.get('sector', 'Unknown') for s in top_stocks))}")
+
 
 
 def print_stock_summary(logger, stock, rank):

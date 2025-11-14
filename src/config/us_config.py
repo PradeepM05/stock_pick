@@ -15,34 +15,41 @@ US_DATA_SOURCES = {
 
 
 # =============================================================================
-# US MARKET FILTERS
+# US MARKET FILTERS - HIDDEN GEMS FOCUS
 # =============================================================================
 US_FILTERS = {
-    # Market Cap - very wide range to include everything
-    'market_cap_min': 50_000_000,        # $50M (very small cap OK)
-    'market_cap_max': 5_000_000_000_000, # $5T (all mega caps included)
+    # Market Cap - TEMPORARILY RELAXED for testing (will find some results)
+    'market_cap_min': 100_000_000,        # $100M (profitable small companies)
+    'market_cap_max': 100_000_000_000,    # $100B (include some large caps for testing)
     
-    # Liquidity - minimal requirement
-    'volume_min': 50_000,                # Lower threshold
+    # Liquidity - Ensure tradeable but not overly popular
+    'volume_min': 100_000,                # Decent volume for liquidity
     
-    # Fundamentals - very lenient, just basic quality checks
-    'pe_ratio_max': 200,                 # Very high (allow any growth stocks)
-    'roe_min': 0,                        # Any positive ROE
-    'debt_to_equity_max': 10.0,          # Very lenient on debt
-    'revenue_growth_min': -50,           # Even declining revenue OK (just not bankrupt)
-    'earnings_growth_min': -50,          # Even declining earnings OK
+    # Value - Use PEG ratio with smart fallbacks
+    'peg_ratio_max': 2.0,                 # More lenient PEG for testing
+    'pe_ratio_max_fallback': 25,          # Fallback P/E when no growth data
+    'pe_ratio_min': 1,                    # Must be profitable (no losses)
+    'roe_min': 8,                         # Relaxed ROE for testing
     
-    # Price Action - don't filter on technicals
-    'price_above_200ma': False,
+    # Financial Health - RELAXED for testing
+    'debt_to_equity_max': 2.0,            # More lenient debt
+    'current_ratio_min': 0.8,             # Relaxed liquidity
+    'profit_margin_min': 2,               # Lower margin requirement
+    
+    # Growth - RELAXED for testing  
+    'revenue_growth_min': -10,            # Allow some decline
+    'earnings_growth_min': -10,           # Allow some decline
+    
+    # Price Action - Simple momentum check
+    'price_above_200ma': False,           # Don't require momentum (value focus)
     'price_above_50ma': False,
     
-    # Additional Quality Filters - minimal
-    'operating_margin_min': -100,        # Even negative margins OK
-    'current_ratio_min': 0.1,            # Very minimal liquidity requirement
+    # Quality filters for hidden gems
+    'operating_margin_min': 5,            # Profitable operations
     
-    # Sector Diversification - include all
+    # Avoid hype sectors (can be enabled if desired)
     'sectors_include': [],
-    'sectors_exclude': [],               # No exclusions!
+    'sectors_exclude': [],               # Keep all sectors but add anti-hype logic
     
     # Country filters
     'countries': ['US']
@@ -53,10 +60,18 @@ US_FILTERS = {
 # US VALUATION THRESHOLDS
 # =============================================================================
 US_VALUATION_THRESHOLDS = {
-    'eps_growth_excellent': 15,
-    'eps_growth_good': 10,
-    'eps_growth_3y_excellent': 12,
-    'eps_growth_3y_good': 8,
+    # PEG ratio scoring (Price/Earnings to Growth) - NEW!
+    'peg_excellent': 0.8,       # PEG < 0.8 = excellent value
+    'peg_good': 1.2,           # PEG < 1.2 = good value
+    'peg_fair': 1.5,           # PEG < 1.5 = fair value
+    
+    # Growth scoring (updated for PEG compatibility)
+    'eps_growth_excellent': 25,
+    'eps_growth_good': 15,
+    'eps_growth_3y_excellent': 20,
+    'eps_growth_3y_good': 12,
+    
+    # Quality scoring (unchanged)
     'roe_excellent': 20,
     'roe_good': 15,
     'debt_equity_excellent': 0.5,

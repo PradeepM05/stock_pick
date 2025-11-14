@@ -15,34 +15,41 @@ INDIA_DATA_SOURCES = {
 
 
 # =============================================================================
-# INDIA MARKET FILTERS
+# INDIA MARKET FILTERS - HIDDEN GEMS FOCUS
 # =============================================================================
 INDIA_FILTERS = {
-    # Market Cap (in INR) - very wide range
-    'market_cap_min': 50_000_000,        # ₹50 Cr (very small cap OK)
-    'market_cap_max': 50_000_000_000_000, # ₹50,00,000 Cr (~$6T - unlimited basically)
+    # Market Cap (in INR) - TEMPORARILY RELAXED for debugging
+    'market_cap_min': 500_000_000,           # ₹50 Cr ($60M - profitable small companies)
+    'market_cap_max': 50_000_000_000_000,    # ₹50 Lakh Cr (very high - temporary)
     
-    # Liquidity - minimal
-    'volume_min': 10_000,                # Very low threshold
+    # Liquidity - Ensure tradeable but not overly popular
+    'volume_min': 50_000,                    # Decent volume for liquidity
     
-    # Fundamentals - very lenient
-    'pe_ratio_max': 200,                 # Very high (allow any growth stocks)
-    'roe_min': 0,                        # Any positive ROE
-    'debt_to_equity_max': 10.0,          # Very lenient on debt
-    'revenue_growth_min': -50,           # Even declining OK
-    'earnings_growth_min': -50,          # Even declining OK
+    # Value - Use PEG ratio with fallbacks (relaxed)
+    'peg_ratio_max': 2.0,                    # More lenient PEG for testing
+    'pe_ratio_max_fallback': 30,             # Fallback P/E when no growth data  
+    'pe_ratio_min': 1,                       # Must be profitable (no losses)
+    'roe_min': 8,                            # Relaxed ROE for testing
     
-    # Price Action
-    'price_above_200ma': False,
+    # Financial Health - RELAXED for testing
+    'debt_to_equity_max': 3.0,            # More lenient debt
+    'current_ratio_min': 0.5,             # Relaxed liquidity  
+    'profit_margin_min': 1,               # Lower margin requirement
+    
+    # Growth - RELAXED for testing
+    'revenue_growth_min': -20,            # Allow some decline
+    'earnings_growth_min': -20,           # Allow some decline
+    
+    # Price Action - Simple momentum check
+    'price_above_200ma': False,           # Don't require momentum (value focus)
     'price_above_50ma': False,
     
-    # Additional Filters - minimal
-    'operating_margin_min': -100,        # Even negative OK
-    'current_ratio_min': 0.1,            # Very minimal
+    # Quality filters for hidden gems
+    'operating_margin_min': 3,            # Profitable operations (lower than US)
     
     # Sector Diversification - include all
     'sectors_include': [],
-    'sectors_exclude': [],               # No exclusions!
+    'sectors_exclude': [],               # Keep all sectors but add anti-hype logic
     
     # Specific to India
     'exchanges': ['NSE', 'BSE'],
@@ -56,16 +63,24 @@ INDIA_FILTERS = {
 
 
 # =============================================================================
-# INDIA VALUATION THRESHOLDS
+# INDIA VALUATION THRESHOLDS - PEG-Based System
 # =============================================================================
 INDIA_VALUATION_THRESHOLDS = {
-    'eps_growth_excellent': 12,
-    'eps_growth_good': 8,
-    'eps_growth_3y_excellent': 10,
-    'eps_growth_3y_good': 7,
-    'roe_excellent': 18,
+    # PEG ratio scoring (Price/Earnings to Growth) - NEW!
+    'peg_excellent': 0.8,       # PEG < 0.8 = excellent value
+    'peg_good': 1.2,           # PEG < 1.2 = good value
+    'peg_fair': 1.5,           # PEG < 1.5 = fair value
+    
+    # Growth scoring (updated for Indian market conditions)
+    'eps_growth_excellent': 20,    # Slightly lower than US due to different economy
+    'eps_growth_good': 12,
+    'eps_growth_3y_excellent': 15,
+    'eps_growth_3y_good': 10,
+    
+    # Quality scoring (adjusted for Indian market)
+    'roe_excellent': 18,           # Slightly lower than US
     'roe_good': 12,
-    'debt_equity_excellent': 0.7,
+    'debt_equity_excellent': 0.7,  # Higher than US (different leverage norms)
     'debt_equity_good': 1.5,
 }
 
@@ -95,7 +110,7 @@ INDIA_FALLBACK_EXCHANGES = ['NSE']
 # =============================================================================
 # OUTPUT FILE
 # =============================================================================
-INDIA_OUTPUT_FILE = 'stock_picks_india.csv'
+INDIA_OUTPUT_FILE = 'hidden_gems_india.csv'
 
 
 # =============================================================================

@@ -116,10 +116,12 @@ class BulkFetcher:
                 # Valuation metrics
                 'pe_ratio': info.get('trailingPE'),
                 'forward_pe': info.get('forwardPE'),
+                'peg_ratio': info.get('pegRatio'),  # NEW: PEG ratio from yfinance
                 
                 # Profitability
                 'roe': info.get('returnOnEquity'),
                 'profit_margin': info.get('profitMargins'),
+                'operating_margin': info.get('operatingMargins'),
                 
                 # Growth
                 'revenue_growth': info.get('revenueGrowth'),
@@ -134,9 +136,16 @@ class BulkFetcher:
             }
             
             # Convert percentages to actual percentages
-            for key in ['roe', 'profit_margin', 'revenue_growth', 'earnings_growth']:
+            for key in ['roe', 'profit_margin', 'operating_margin', 'revenue_growth', 'earnings_growth']:
                 if basic_data.get(key) is not None:
                     basic_data[key] = basic_data[key] * 100
+            
+            # Calculate PEG manually if not provided
+            if not basic_data.get('peg_ratio'):
+                pe = basic_data.get('pe_ratio')
+                earnings_growth = basic_data.get('earnings_growth')
+                if pe and earnings_growth and earnings_growth > 0:
+                    basic_data['peg_ratio'] = pe / earnings_growth
             
             return basic_data
             
@@ -199,13 +208,31 @@ class BulkFetcher:
         if volume < filters.get('volume_min', 0):
             return 'volume_too_low'
         
-        # P/E ratio
+        # PEG ratio (Price/Earnings to Growth) - WITH FALLBACKS
+        peg = data.get('peg_ratio')
         pe = data.get('pe_ratio')
+        earnings_growth = data.get('earnings_growth')
+        
+        # Try to use PEG if available
+        if peg is not None and peg > 0:
+            if peg > filters.get('peg_ratio_max', float('inf')):
+                return 'peg_too_high'
+        # Fallback: If no PEG, calculate it manually
+        elif pe and earnings_growth and pe > 0 and earnings_growth > 0:
+            calculated_peg = pe / earnings_growth
+            if calculated_peg > filters.get('peg_ratio_max', float('inf')):
+                return 'calculated_peg_too_high'
+        # Final fallback: Use P/E only (more lenient)
+        elif pe and pe > 0:
+            # If no growth data, use relaxed P/E limit
+            pe_max_fallback = filters.get('pe_ratio_max_fallback', 25)  # More lenient than PEG
+            if pe > pe_max_fallback:
+                return 'pe_too_high_fallback'
+        
+        # P/E ratio (keep for minimum profitability check)
         if pe is not None:
-            if pe > filters.get('pe_ratio_max', float('inf')):
-                return 'pe_too_high'
-            if pe < 0:  # Negative P/E (losing money)
-                return 'negative_earnings'
+            if pe < filters.get('pe_ratio_min', 0):  # Must be profitable
+                return 'negative_or_low_earnings'
         
         # ROE
         roe = data.get('roe')
@@ -232,6 +259,16 @@ class BulkFetcher:
         if current_ratio is not None and current_ratio < filters.get('current_ratio_min', 0):
             return 'current_ratio_too_low'
         
+        # Profit margin filter for quality
+        profit_margin = data.get('profit_margin')
+        if profit_margin is not None and profit_margin < filters.get('profit_margin_min', 0):
+            return 'profit_margin_too_low'
+        
+        # Operating margin filter for quality
+        operating_margin = data.get('operating_margin')
+        if operating_margin is not None and operating_margin < filters.get('operating_margin_min', 0):
+            return 'operating_margin_too_low'
+        
         # Sector exclusions
         sector = data.get('sector', '')
         sectors_exclude = filters.get('sectors_exclude', [])
@@ -245,3 +282,92 @@ class BulkFetcher:
         
         # Passed all filters
         return None
+    
+    def find_simple_gems(self, stocks_data: Dict[str, Dict], max_results: int = 10) -> List[str]:
+        """
+        Simple method to find hidden gems from filtered stocks
+        
+        Args:
+            stocks_data: Dictionary of ticker -> fundamentals
+            max_results: Maximum gems to return
+            
+        Returns:
+            List of ticker symbols ranked by simple gem score
+        """
+        logger.info(f"\n💎 Finding hidden gems from {len(stocks_data)} stocks...")
+        
+        gem_candidates = []
+        
+        for ticker, data in stocks_data.items():
+            score = self._simple_gem_score(data)
+            if score > 5:  # Only consider stocks with decent scores
+                gem_candidates.append((ticker, score, data))
+        
+        # Sort by score (highest first)
+        gem_candidates.sort(key=lambda x: x[1], reverse=True)
+        
+        logger.info(f"Found {len(gem_candidates)} potential gems")
+        if gem_candidates:
+            logger.info(f"Best gem score: {gem_candidates[0][1]:.1f} ({gem_candidates[0][0]})")
+        
+        # Return just the tickers
+        return [ticker for ticker, score, data in gem_candidates[:max_results]]
+    
+    def _simple_gem_score(self, data: Dict) -> float:
+        """
+        Calculate simple gem score (0-10)
+        Higher is better
+        """
+        score = 0
+        
+        # PEG ratio points (much smarter than just P/E!)
+        peg = data.get('peg_ratio')
+        if peg and peg > 0:
+            if peg < 0.8:
+                score += 4    # Excellent value (undervalued growth)
+            elif peg < 1.2:
+                score += 3    # Good value
+            elif peg < 1.5:
+                score += 2    # Fair value
+            elif peg < 2.0:
+                score += 1    # Acceptable
+        
+        # Backup: P/E points (if PEG not available)
+        elif not peg:
+            pe = data.get('pe_ratio')
+            if pe and 0 < pe < 8:
+                score += 3
+            elif pe and 8 <= pe < 12:
+                score += 2
+            elif pe and 12 <= pe < 15:
+                score += 1
+        
+        # Quality points (high ROE)
+        roe = data.get('roe')
+        if roe and roe > 20:
+            score += 3
+        elif roe and roe > 15:
+            score += 2
+        elif roe and roe > 10:
+            score += 1
+        
+        # Growth points
+        rev_growth = data.get('revenue_growth')
+        if rev_growth and rev_growth > 10:
+            score += 2
+        elif rev_growth and rev_growth > 0:
+            score += 1
+        
+        # Safety points (low debt)
+        debt_equity = data.get('debt_to_equity')
+        if debt_equity is not None and debt_equity < 0.5:
+            score += 2
+        elif debt_equity is not None and debt_equity < 1.0:
+            score += 1
+        
+        # Size bonus (prefer smaller companies)
+        market_cap = data.get('market_cap', 0)
+        if market_cap < 500_000_000:  # < $500M
+            score += 0.5
+        
+        return score
