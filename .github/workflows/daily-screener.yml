@@ -1,0 +1,148 @@
+name: Daily Hidden Gems Screener
+
+# Schedule to run every weekday at 6:30 PM EST (after US market close)
+# and at 4:00 PM IST (after India market close)
+on:
+  schedule:
+    # Run at 23:30 UTC (6:30 PM EST) on weekdays for US market
+    - cron: '30 23 * * 1-5'
+    # Run at 10:30 UTC (4:00 PM IST) on weekdays for India market 
+    - cron: '30 10 * * 1-5'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      market:
+        description: 'Market to screen'
+        required: true
+        default: 'BOTH'
+        type: choice
+        options:
+        - US
+        - INDIA
+        - BOTH
+      send_email:
+        description: 'Send email report'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  screen-stocks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install python-dotenv  # Ensure dotenv is available
+        
+    - name: Create environment file
+      run: |
+        echo "# Environment variables for GitHub Actions" > .env
+        echo "YAHOO_FINANCE_API_KEY='${{ secrets.YAHOO_FINANCE_API_KEY }}'" >> .env
+        echo "SENDER_EMAIL=${{ secrets.SENDER_EMAIL }}" >> .env
+        echo "SENDER_PASSWORD=${{ secrets.SENDER_PASSWORD }}" >> .env
+        echo "REPORT_RECIPIENTS=${{ secrets.REPORT_RECIPIENTS }}" >> .env
+        echo "LOG_LEVEL=INFO" >> .env
+        
+    - name: Create output directories
+      run: |
+        mkdir -p output
+        mkdir -p cache
+        mkdir -p logs
+        
+    - name: Copy email reporter to project root
+      run: |
+        # The email_reporter.py will be in the repo root
+        ls -la
+        
+    - name: Determine market and time
+      id: market-time
+      run: |
+        HOUR=$(date -u +%H)
+        if [ "$HOUR" -eq "23" ]; then
+          echo "market=US" >> $GITHUB_OUTPUT
+          echo "Running US market screening (6:30 PM EST)"
+        elif [ "$HOUR" -eq "10" ]; then
+          echo "market=INDIA" >> $GITHUB_OUTPUT  
+          echo "Running India market screening (4:00 PM IST)"
+        else
+          echo "market=BOTH" >> $GITHUB_OUTPUT
+          echo "Running both markets (manual trigger)"
+        fi
+        
+    - name: Run stock screening
+      run: |
+        MARKET="${{ github.event.inputs.market || steps.market-time.outputs.market }}"
+        SEND_EMAIL="${{ github.event.inputs.send_email || 'true' }}"
+        
+        if [ "$SEND_EMAIL" = "true" ]; then
+          python main_daily.py --market $MARKET --send-email --no-cache
+        else
+          python main_daily.py --market $MARKET --no-cache
+        fi
+        
+    - name: Upload results as artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: daily-screening-results-${{ github.run_number }}
+        path: |
+          output/daily_gems_*.csv
+          logs/*.log
+        retention-days: 30
+        
+    - name: Create summary
+      if: always()
+      run: |
+        echo "## 📈 Daily Hidden Gems Screening Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "**Market:** ${{ github.event.inputs.market || steps.market-time.outputs.market }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -d "output" ] && [ "$(ls -A output/daily_gems_*.csv 2>/dev/null)" ]; then
+          echo "### 📁 Generated Files:" >> $GITHUB_STEP_SUMMARY
+          for file in output/daily_gems_*.csv; do
+            if [ -f "$file" ]; then
+              lines=$(wc -l < "$file")
+              echo "- \`$(basename $file)\` ($(($lines - 1)) stocks)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+        else
+          echo "### ⚠️ No output files generated" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Latest Log Entries:" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        if [ -f logs/*.log ]; then
+          tail -20 logs/*.log | head -10 >> $GITHUB_STEP_SUMMARY
+        else
+          echo "No log files found" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Screening failed - check logs for details"
+        # The error notification will be sent by the main_daily.py script
