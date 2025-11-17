@@ -95,9 +95,9 @@ class BaseScreener(ABC):
     def _log_results(self, tickers: List[str], source: str):
         """Log screening results"""
         if tickers:
-            logger.info(f"✓ {self.market_name} ({source}): Found {len(tickers)} stocks")
+            logger.info(f"[OK] {self.market_name} ({source}): Found {len(tickers)} stocks")
         else:
-            logger.warning(f"✗ {self.market_name} ({source}): No stocks found")
+            logger.warning(f"[X] {self.market_name} ({source}): No stocks found")
     
     def validate_filters(self) -> bool:
         """

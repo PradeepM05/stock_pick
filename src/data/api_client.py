@@ -198,7 +198,7 @@ class NSEIndiaClient:
             if response.status_code == 200:
                 df = pd.read_csv(StringIO(response.text))
                 tickers = [f"{symbol}.NS" for symbol in df['Symbol'].tolist()]
-                logger.info(f"✓ NSE: {len(tickers)} stocks fetched")
+                logger.info(f"[OK] NSE: {len(tickers)} stocks fetched")
                 return tickers
             else:
                 logger.error(f"NSE API returned status {response.status_code}")
@@ -316,7 +316,7 @@ class YFinanceScreenerClient:
                     index = yf.Ticker(index_symbol)
                     info = index.info
                     if info:
-                        logger.info(f"✓ {index_name} validated")
+                        logger.info(f"[OK] {index_name} validated")
                 except Exception as e:
                     logger.debug(f"Could not fetch {index_name}: {e}")
             
@@ -324,7 +324,7 @@ class YFinanceScreenerClient:
             logger.info("Using curated list of major Indian stocks...")
             nifty_stocks = self._get_major_indian_stocks()
             
-            logger.info(f"✓ Found {len(nifty_stocks)} Indian stocks")
+            logger.info(f"[OK] Found {len(nifty_stocks)} Indian stocks")
             return nifty_stocks
             
         except Exception as e:
@@ -428,10 +428,10 @@ class YFinanceScreenerClient:
                     df = tables[0]
                     tickers = df['Symbol'].tolist()
                     
-                    # Clean tickers (BRK.B → BRK-B for yfinance)
+                    # Clean tickers (BRK.B -> BRK-B for yfinance)
                     tickers = [ticker.replace('.', '-') for ticker in tickers]
                     
-                    logger.info(f"✓ Wikipedia: {len(tickers)} S&P 500 stocks")
+                    logger.info(f"[OK] Wikipedia: {len(tickers)} S&P 500 stocks")
                     return tickers
             except Exception as e:
                 logger.warning(f"Wikipedia failed: {e}")
@@ -458,7 +458,7 @@ class YFinanceScreenerClient:
                 df = pd.read_csv(github_url)
                 tickers = df['Symbol'].tolist()
                 tickers = [ticker.replace('.', '-') for ticker in tickers]
-                logger.info(f"✓ GitHub: {len(tickers)} S&P 500 stocks")
+                logger.info(f"[OK] GitHub: {len(tickers)} S&P 500 stocks")
                 return tickers
             except Exception as e:
                 logger.warning(f"GitHub failed: {e}")
@@ -647,7 +647,7 @@ class YFinanceScreenerClient:
         # Remove duplicates and sort
         stocks = sorted(list(set(stocks)))
         
-        logger.info(f"✓ Expanded universe with small-caps: {len(stocks)} stocks")
+        logger.info(f"[OK] Expanded universe with small-caps: {len(stocks)} stocks")
         logger.info(f"  - Includes small-cap, mid-cap, and large-cap stocks for hidden gems")
         logger.info(f"  - DEBUG: First 10 stocks: {stocks[:10]}")
         logger.info(f"  - DEBUG: Last 10 stocks: {stocks[-10:]}")

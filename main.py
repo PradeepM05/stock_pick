@@ -105,24 +105,24 @@ def main():
         logger.error("No stocks found in initial screening. Exiting.")
         return
     
-    logger.info(f"\n✓ Found {len(all_tickers)} tickers to screen")
-    
+    logger.info(f"\n[OK] Found {len(all_tickers)} tickers to screen")
+
     # STEP 2: BULK FETCH & PRE-FILTER (NEW!)
     logger.info(f"\n{'=' * 70}")
     logger.info(f"STEP 2: BULK FETCHING FUNDAMENTALS & PRE-FILTERING")
     logger.info(f"This efficient approach saves 90% of API calls!")
     logger.info('=' * 70)
-    
+
     bulk_fetcher = BulkFetcher(max_workers=10)
-    
+
     # Fetch basic fundamentals for all stocks
     stocks_data = bulk_fetcher.fetch_basic_fundamentals(all_tickers, batch_size=50)
-    
+
     if not stocks_data:
         logger.error("Failed to fetch fundamental data. Exiting.")
         return
-    
-    logger.info(f"\n✓ Fetched fundamentals for {len(stocks_data)} stocks")
+
+    logger.info(f"\n[OK] Fetched fundamentals for {len(stocks_data)} stocks")
     
     # Apply filters to get candidates
     filtered_tickers = bulk_fetcher.apply_filters(stocks_data, market_config['filters'])
@@ -139,39 +139,39 @@ def main():
                        f"P/E: {data.get('pe_ratio', 'N/A')}")
         return
     
-    logger.info(f"\n✓ {len(filtered_tickers)} stocks passed all filters")
-    logger.info(f"   Reduction: {len(all_tickers)} → {len(filtered_tickers)} stocks")
+    logger.info(f"\n[OK] {len(filtered_tickers)} stocks passed all filters")
+    logger.info(f"   Reduction: {len(all_tickers)} -> {len(filtered_tickers)} stocks")
     logger.info(f"   API calls saved: ~{(len(all_tickers) - len(filtered_tickers)) * 2}")
-    
+
     # Limit to top-n for analysis if specified
     tickers_to_analyze = filtered_tickers[:args.top_n * 2] if not args.analyze_all else filtered_tickers
-    
+
     # STEP 3: DEEP ANALYSIS (only on filtered stocks!)
     logger.info(f"\n{'=' * 70}")
     logger.info(f"STEP 3: DEEP ANALYSIS ON {len(tickers_to_analyze)} FILTERED STOCKS")
     logger.info(f"Estimated time: {len(tickers_to_analyze) * 2 // 60} minutes")
     logger.info('=' * 70)
-    
+
     # Initialize scorer WITH SECTOR BENCHMARKS
     scorer = StockScorer(
         valuation_thresholds=market_config.get('valuation_thresholds', {}),
         action_thresholds=ACTION_THRESHOLDS,
         sector_benchmarks=SECTOR_BENCHMARKS  # NEW!
     )
-    
+
     # Analyze stocks WITH PARALLEL PROCESSING
     analyzed_stocks = []
     failed_count = 0
-    
-    logger.info("→ Using parallel processing (5 workers) for faster analysis...")
-    
+
+    logger.info("-> Using parallel processing (5 workers) for faster analysis...")
+
     with ThreadPoolExecutor(max_workers=5) as executor:
         # Submit all analysis tasks
         future_to_ticker = {
             executor.submit(scorer.score_stock, ticker): ticker
             for ticker in tickers_to_analyze
         }
-        
+
         # Process results with progress bar
         with tqdm(total=len(tickers_to_analyze), desc="Analyzing stocks", unit="stock") as pbar:
             for future in as_completed(future_to_ticker):
@@ -180,13 +180,13 @@ def main():
                     result = future.result()
                     if result:
                         analyzed_stocks.append(result)
-                        logger.info(f"   ✓ {ticker}: {result['action']} (Score={result['composite_score']:.1f})")
+                        logger.info(f"   [OK] {ticker}: {result['action']} (Score={result['composite_score']:.1f})")
                     else:
                         failed_count += 1
-                        logger.warning(f"   ✗ {ticker}: Failed")
+                        logger.warning(f"   [X] {ticker}: Failed")
                 except Exception as e:
                     failed_count += 1
-                    logger.error(f"   ✗ {ticker}: Error - {e}")
+                    logger.error(f"   [X] {ticker}: Error - {e}")
                 finally:
                     pbar.update(1)
     
@@ -350,7 +350,7 @@ def save_results_to_csv(stocks, market, logger):
     
     # Save to CSV
     df.to_csv(filepath, index=False)
-    logger.info(f"\n✓ Results saved to: {filepath}")
+    logger.info(f"\n[OK] Results saved to: {filepath}")
     logger.info(f"   Columns: {', '.join(df.columns)}")
     logger.info(f"   Rows: {len(df)}")
 

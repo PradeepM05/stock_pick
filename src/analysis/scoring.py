@@ -159,7 +159,7 @@ class StockScorer:
                 'technicals': technicals
             }
             
-            logger.info(f"✓ {ticker}: {action['action']} (V:{valuation_score:.0f} T:{technical_score:.0f})")
+            logger.info(f"[OK] {ticker}: {action['action']} (V:{valuation_score:.0f} T:{technical_score:.0f})")
             
             return result
             

@@ -181,8 +181,8 @@ class BulkFetcher:
             else:
                 failed_reasons[reason] = failed_reasons.get(reason, 0) + 1
         
-        logger.info(f"\n✓ {len(passed)} stocks passed filters")
-        logger.info(f"✗ {len(stocks_data) - len(passed)} stocks filtered out:")
+        logger.info(f"\n[OK] {len(passed)} stocks passed filters")
+        logger.info(f"[X] {len(stocks_data) - len(passed)} stocks filtered out:")
         
         for reason, count in sorted(failed_reasons.items(), key=lambda x: x[1], reverse=True):
             logger.info(f"  - {reason}: {count} stocks")
@@ -212,7 +212,23 @@ class BulkFetcher:
         peg = data.get('peg_ratio')
         pe = data.get('pe_ratio')
         earnings_growth = data.get('earnings_growth')
-        
+
+        # Convert to float if string (yfinance sometimes returns strings)
+        try:
+            peg = float(peg) if peg is not None and peg != '' else None
+        except (ValueError, TypeError):
+            peg = None
+
+        try:
+            pe = float(pe) if pe is not None and pe != '' else None
+        except (ValueError, TypeError):
+            pe = None
+
+        try:
+            earnings_growth = float(earnings_growth) if earnings_growth is not None and earnings_growth != '' else None
+        except (ValueError, TypeError):
+            earnings_growth = None
+
         # Try to use PEG if available
         if peg is not None and peg > 0:
             if peg > filters.get('peg_ratio_max', float('inf')):
@@ -228,7 +244,7 @@ class BulkFetcher:
             pe_max_fallback = filters.get('pe_ratio_max_fallback', 25)  # More lenient than PEG
             if pe > pe_max_fallback:
                 return 'pe_too_high_fallback'
-        
+
         # P/E ratio (keep for minimum profitability check)
         if pe is not None:
             if pe < filters.get('pe_ratio_min', 0):  # Must be profitable

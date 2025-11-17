@@ -69,7 +69,7 @@ class CacheManager:
             tickers = cache_data.get('tickers', [])
             age_hours = self._get_cache_age_hours(cache_data['timestamp'])
             
-            logger.info(f"✓ Loaded {len(tickers)} tickers from cache for {market} (age: {age_hours:.1f}h)")
+            logger.info(f"[OK] Loaded {len(tickers)} tickers from cache for {market} (age: {age_hours:.1f}h)")
             
             return tickers
             
@@ -100,7 +100,7 @@ class CacheManager:
             with open(cache_file, 'wb') as f:
                 pickle.dump(cache_data, f)
             
-            logger.info(f"✓ Cached {len(tickers)} tickers for {market}")
+            logger.info(f"[OK] Cached {len(tickers)} tickers for {market}")
             
         except Exception as e:
             logger.error(f"Error saving cache for {market}: {e}")

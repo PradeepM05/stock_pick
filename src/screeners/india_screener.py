@@ -177,7 +177,7 @@ class IndiaScreener(BaseScreener):
                 tickers = self.nse_client.fetch_index(index)
                 if tickers:
                     all_tickers.extend(tickers)
-                    logger.info(f"✓ {index}: {len(tickers)} stocks")
+                    logger.info(f"[OK] {index}: {len(tickers)} stocks")
             except Exception as e:
                 logger.error(f"Error fetching {index}: {e}")
         
