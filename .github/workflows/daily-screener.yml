@@ -92,10 +92,12 @@ jobs:
     - name: Run stock screening
       run: |
         MARKET="${{ github.event.inputs.market || steps.market-time.outputs.market }}"
-        SEND_EMAIL="${{ github.event.inputs.send_email || 'false' }}"
-        
-        echo "Market: $MARKET"
-        echo "Send Email: $SEND_EMAIL"
+        # For scheduled runs (cron), always send email. For manual triggers, use the input.
+        if [ -z "${{ github.event.inputs.send_email }}" ]; then
+          SEND_EMAIL="true"
+        else
+          SEND_EMAIL="${{ github.event.inputs.send_email }}"
+        fi
         
         if [ "$SEND_EMAIL" = "true" ]; then
           python main_daily.py --market $MARKET --send-email --no-cache
