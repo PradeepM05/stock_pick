@@ -48,10 +48,16 @@ def main():
         help='Logging level (default: INFO)'
     )
     parser.add_argument(
-        '--top-n',
+        '--min-stocks',
         type=int,
         default=20,
-        help='Number of top stocks to return (default: 20)'
+        help='Minimum portfolio size (default: 20, will expand based on opportunities)'
+    )
+    parser.add_argument(
+        '--max-stocks',
+        type=int,
+        default=40,
+        help='Maximum portfolio size (default: 40, contracts if few quality opportunities)'
     )
     parser.add_argument(
         '--analyze-all',
@@ -143,8 +149,8 @@ def main():
     logger.info(f"   Reduction: {len(all_tickers)} -> {len(filtered_tickers)} stocks")
     logger.info(f"   API calls saved: ~{(len(all_tickers) - len(filtered_tickers)) * 2}")
 
-    # Limit to top-n for analysis if specified
-    tickers_to_analyze = filtered_tickers[:args.top_n * 2] if not args.analyze_all else filtered_tickers
+    # Limit to top candidates for analysis if specified
+    tickers_to_analyze = filtered_tickers[:args.max_stocks * 2] if not args.analyze_all else filtered_tickers
 
     # STEP 3: DEEP ANALYSIS (only on filtered stocks!)
     logger.info(f"\n{'=' * 70}")
@@ -245,8 +251,24 @@ def main():
                        f"MCap: ${data.get('market_cap', 0)/1e6:.0f}M")
     
     # Rank by composite score within each category
-    top_stocks = scorer.rank_stocks(all_recommendation_stocks, by='composite_score')[:args.top_n]
-    logger.info(f"Top {len(top_stocks)} recommendations selected")
+    initial_top_stocks = scorer.rank_stocks(all_recommendation_stocks, by='composite_score')
+    
+    # *** NEW: QUALITY-FIRST DIVERSIFICATION (REPLACES HARD CAPS) ***
+    logger.info(f"\n{'=' * 70}")
+    logger.info("QUALITY-FIRST PORTFOLIO CONSTRUCTION")
+    logger.info('=' * 70)
+    logger.info(f"Candidate stocks: {len(initial_top_stocks)}")
+    logger.info("Approach: Best stocks with progressive concentration penalties")
+    
+    # Apply quality-first diversification (expands portfolio size based on opportunities)
+    top_stocks = scorer.apply_quality_diversification(
+        initial_top_stocks,
+        min_portfolio_size=args.min_stocks,    # Minimum portfolio size
+        max_portfolio_size=args.max_stocks,    # Maximum portfolio size  
+        quality_threshold=70                   # Minimum quality score
+    )
+    
+    logger.info(f"Final portfolio: {len(top_stocks)} stocks (adaptive sizing)")
     
     # STEP 5: Display results
     logger.info(f"\n{'=' * 70}")

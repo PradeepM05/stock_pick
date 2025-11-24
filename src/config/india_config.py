@@ -18,40 +18,58 @@ INDIA_DATA_SOURCES = {
 # INDIA MARKET FILTERS - HIDDEN GEMS FOCUS
 # =============================================================================
 INDIA_FILTERS = {
-    # Market Cap (in INR) - TEMPORARILY RELAXED for debugging
-    'market_cap_min': 500_000_000,           # ₹50 Cr ($60M - profitable small companies)
-    'market_cap_max': 50_000_000_000_000,    # ₹50 Lakh Cr (very high - temporary)
+    # Market Cap (in INR) - Focused range for quality
+    'market_cap_min': 1_000_000_000,         # ₹100 Cr (higher minimum for quality)
+    'market_cap_max': 5_000_000_000_000,     # ₹5 Lakh Cr (reasonable maximum)
     
-    # Liquidity - Ensure tradeable but not overly popular
-    'volume_min': 50_000,                    # Decent volume for liquidity
+    # Liquidity - Ensure tradeable
+    'volume_min': 100_000,                   # Increased for better liquidity
     
-    # Value - Use PEG ratio with fallbacks (relaxed)
-    'peg_ratio_max': 2.0,                    # More lenient PEG for testing
-    'pe_ratio_max_fallback': 30,             # Fallback P/E when no growth data  
-    'pe_ratio_min': 1,                       # Must be profitable (no losses)
-    'roe_min': 8,                            # Relaxed ROE for testing
+    # Value - Stricter requirements
+    'peg_ratio_max': 1.5,                    # More selective PEG (was 2.0)
+    'pe_ratio_max_fallback': 25,             # Reduced from 30
+    'pe_ratio_min': 1,                       # Must be profitable
+    'roe_min': 12,                           # Higher ROE requirement (was 8)
     
-    # Financial Health - RELAXED for testing
-    'debt_to_equity_max': 3.0,            # More lenient debt
-    'current_ratio_min': 0.5,             # Relaxed liquidity  
-    'profit_margin_min': 1,               # Lower margin requirement
+    # Financial Health - Tighter requirements
+    'debt_to_equity_max': 2.5,               # Reduced from 3.0
+    'current_ratio_min': 1.0,                # Increased from 0.5
+    'profit_margin_min': 3,                  # Maintained
     
-    # Growth - RELAXED for testing
-    'revenue_growth_min': -20,            # Allow some decline
-    'earnings_growth_min': -20,           # Allow some decline
+    # Growth - Stable or growing companies
+    'revenue_growth_min': 0,                 # At least stable (was -20)
+    'earnings_growth_min': -10,              # Allow minor decline (was -20)
     
     # Price Action - Simple momentum check
-    'price_above_200ma': False,           # Don't require momentum (value focus)
+    'price_above_200ma': False,
     'price_above_50ma': False,
     
-    # Quality filters for hidden gems
-    'operating_margin_min': 3,            # Profitable operations (lower than US)
+    # Quality filters
+    'operating_margin_min': 5,               # Higher requirement (was 3)
     
-    # Sector Diversification - include all
-    'sectors_include': [],
-    'sectors_exclude': [],               # Keep all sectors but add anti-hype logic
+    # *** NEW: SECTOR DIVERSIFICATION CONTROLS ***
+    'max_sector_allocation': 0.25,           # Max 25% per sector
+    'max_financial_services': 5,             # Max 5 bank stocks out of 20
+    'min_sectors_required': 5,               # Must have at least 5 sectors
     
-    # Specific to India
+    # Bank-specific stricter filters
+    'bank_specific_filters': {
+        'min_roe': 15,                       # Higher ROE for banks
+        'max_pe': 12,                        # Lower P/E for banks  
+        'min_technical_score': 75            # Require strong technicals
+    },
+    
+    # Sector caps
+    'sector_caps': {
+        'Financial Services': 5,             # Max 5 bank stocks
+        'Technology': 5,
+        'Healthcare': 4,
+        'Industrials': 4,
+        'Consumer Cyclical': 3,
+        'Energy': 2
+    },
+    
+    # Exchange and index settings
     'exchanges': ['NSE', 'BSE'],
     'indices_to_scan': [
         'NIFTY500',

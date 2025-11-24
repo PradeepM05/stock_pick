@@ -15,32 +15,36 @@ class BulkFetcher:
     Efficiently fetch basic fundamentals for multiple stocks
     """
     
-    def __init__(self, max_workers: int = 10):
+    def __init__(self, max_workers: int = 3, request_delay: float = 0.5):
         """
-        Initialize bulk fetcher
+        Initialize bulk fetcher with conservative rate limiting
         
         Args:
-            max_workers: Number of parallel threads for fetching
+            max_workers: Number of parallel threads (reduced from 10 to 3)
+            request_delay: Delay between requests in seconds
         """
         self.max_workers = max_workers
+        self.request_delay = request_delay
+        self.last_request_time = 0
     
-    def fetch_basic_fundamentals(self, tickers: List[str], batch_size: int = 50) -> Dict[str, Dict]:
+    def fetch_basic_fundamentals(self, tickers: List[str], batch_size: int = 20) -> Dict[str, Dict]:
         """
-        Fetch basic fundamentals for multiple tickers in parallel
+        Fetch basic fundamentals for multiple tickers with aggressive rate limiting
         
         Args:
             tickers: List of ticker symbols
-            batch_size: Number of tickers to process in each batch
+            batch_size: Number of tickers to process in each batch (reduced from 50)
             
         Returns:
             Dictionary mapping ticker to basic fundamentals
         """
         logger.info(f"Fetching basic fundamentals for {len(tickers)} stocks...")
+        logger.info("Using conservative rate limiting to avoid API throttling...")
         
         results = {}
         failed = []
         
-        # Process in batches
+        # Process in smaller batches with longer delays
         for i in range(0, len(tickers), batch_size):
             batch = tickers[i:i + batch_size]
             batch_num = i // batch_size + 1
@@ -48,31 +52,113 @@ class BulkFetcher:
             
             logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} stocks)...")
             
-            batch_results = self._fetch_batch(batch)
+            batch_results = self._fetch_batch_with_retries(batch)
             results.update(batch_results)
             
             # Count successful vs failed
             batch_failed = [t for t in batch if t not in batch_results]
             failed.extend(batch_failed)
             
-            logger.info(f"  Batch {batch_num}: {len(batch_results)} successful, {len(batch_failed)} failed")
+            success_rate = len(batch_results) / len(batch) * 100 if batch else 0
+            logger.info(f"  Batch {batch_num}: {len(batch_results)} successful, {len(batch_failed)} failed ({success_rate:.1f}%)")
             
-            # Brief pause between batches to avoid rate limiting
+            # Adaptive delay between batches based on success rate
             if i + batch_size < len(tickers):
-                time.sleep(1)
+                if success_rate < 50:
+                    delay = 5.0  # Long delay if many failures
+                    logger.warning(f"High failure rate, increasing delay to {delay}s")
+                elif success_rate < 80:
+                    delay = 3.0  # Medium delay if moderate failures
+                else:
+                    delay = 2.0  # Standard delay if mostly successful
+                
+                logger.info(f"  Waiting {delay}s before next batch...")
+                time.sleep(delay)
         
-        logger.info(f"\nTotal: {len(results)} stocks fetched, {len(failed)} failed")
+        success_rate = len(results) / len(tickers) * 100 if tickers else 0
+        logger.info(f"\nTotal: {len(results)} stocks fetched, {len(failed)} failed ({success_rate:.1f}% success)")
+        
+        # Emergency fallback if too many failures
+        if success_rate < 20 and len(results) < 10:
+            logger.error(f"Critical: Very low success rate ({success_rate:.1f}%)")
+            logger.error("Attempting emergency single-threaded fallback...")
+            
+            emergency_results = self._emergency_fallback(failed[:30])  # Try 30 most important
+            results.update(emergency_results)
+            
+            final_success_rate = len(results) / len(tickers) * 100 if tickers else 0
+            logger.info(f"After emergency fallback: {len(results)} stocks ({final_success_rate:.1f}% success)")
+        
+        # If success rate is still too low, suggest remedial action
+        if success_rate < 30:
+            logger.error(f"Low success rate ({success_rate:.1f}%) indicates severe API throttling")
+            logger.error("Consider:")
+            logger.error("  1. Getting Yahoo Finance API key")
+            logger.error("  2. Reducing batch sizes further")
+            logger.error("  3. Increasing delays between requests")
+            logger.error("  4. Running during off-peak hours")
         
         return results
     
-    def _fetch_batch(self, tickers: List[str]) -> Dict[str, Dict]:
-        """Fetch a batch of tickers in parallel"""
+    def _emergency_fallback(self, tickers: List[str]) -> Dict[str, Dict]:
+        """Emergency single-threaded fallback with maximum delays"""
+        logger.info("Using emergency single-threaded mode...")
         results = {}
         
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+        for i, ticker in enumerate(tickers):
+            if i > 0 and i % 5 == 0:
+                logger.info(f"  Emergency progress: {i}/{len(tickers)}")
+            
+            # Very long delays between requests
+            if i > 0:
+                time.sleep(2.0)
+            
+            try:
+                data = self._fetch_single(ticker)
+                if data:
+                    results[ticker] = data
+            except:
+                continue
+        
+        return results
+    
+    def _fetch_batch_with_retries(self, tickers: List[str], max_retries: int = 2) -> Dict[str, Dict]:
+        """Fetch a batch of tickers with retry logic"""
+        results = {}
+        failed_tickers = tickers.copy()
+        
+        for retry_count in range(max_retries + 1):
+            if not failed_tickers:
+                break
+                
+            if retry_count > 0:
+                delay = 2 ** retry_count  # Exponential backoff
+                logger.info(f"  Retry {retry_count}/{max_retries} with {delay}s delay...")
+                time.sleep(delay)
+            
+            # Reduce concurrency on retries
+            workers = max(1, self.max_workers // (retry_count + 1))
+            
+            batch_results = self._fetch_batch(failed_tickers, workers)
+            results.update(batch_results)
+            
+            # Update failed list
+            failed_tickers = [t for t in failed_tickers if t not in batch_results]
+            
+            if batch_results:
+                logger.debug(f"    Retry {retry_count}: {len(batch_results)} recovered")
+        
+        return results
+    
+    def _fetch_batch(self, tickers: List[str], workers: int = None) -> Dict[str, Dict]:
+        """Fetch a batch of tickers in parallel with controlled concurrency"""
+        results = {}
+        workers = workers or self.max_workers
+        
+        with ThreadPoolExecutor(max_workers=workers) as executor:
             # Submit all tasks
             future_to_ticker = {
-                executor.submit(self._fetch_single, ticker): ticker 
+                executor.submit(self._fetch_single_with_delay, ticker): ticker 
                 for ticker in tickers
             }
             
@@ -88,70 +174,114 @@ class BulkFetcher:
         
         return results
     
+    def _fetch_single_with_delay(self, ticker: str) -> Optional[Dict]:
+        """Fetch single ticker with rate limiting"""
+        # Rate limiting
+        current_time = time.time()
+        time_since_last = current_time - self.last_request_time
+        if time_since_last < self.request_delay:
+            sleep_time = self.request_delay - time_since_last
+            time.sleep(sleep_time)
+        
+        self.last_request_time = time.time()
+        
+        return self._fetch_single(ticker)
+    
     def _fetch_single(self, ticker: str) -> Optional[Dict]:
         """
-        Fetch basic fundamentals for a single ticker
+        Fetch basic fundamentals for a single ticker with enhanced error handling
         
         Returns only essential screening data to minimize API calls
         """
-        try:
-            stock = yf.Ticker(ticker)
-            info = stock.info
-            
-            if not info or len(info) < 5:
-                return None
-            
-            # Extract only essential screening metrics
-            basic_data = {
-                'ticker': ticker,
-                'name': info.get('longName', ticker),
-                'sector': info.get('sector', 'Unknown'),
-                'industry': info.get('industry', 'Unknown'),
+        max_retries = 2
+        
+        for attempt in range(max_retries):
+            try:
+                stock = yf.Ticker(ticker)
+                info = stock.info
                 
-                # Key filtering metrics
-                'market_cap': info.get('marketCap', 0),
-                'volume': info.get('volume', 0),
-                'avg_volume': info.get('averageVolume', 0),
+                if not info or len(info) < 5:
+                    if attempt < max_retries - 1:
+                        time.sleep(0.5)
+                        continue
+                    return None
                 
-                # Valuation metrics
-                'pe_ratio': info.get('trailingPE'),
-                'forward_pe': info.get('forwardPE'),
-                'peg_ratio': info.get('pegRatio'),  # NEW: PEG ratio from yfinance
+                # Extract only essential screening metrics
+                basic_data = {
+                    'ticker': ticker,
+                    'name': info.get('longName', ticker),
+                    'sector': info.get('sector', 'Unknown'),
+                    'industry': info.get('industry', 'Unknown'),
+                    
+                    # Key filtering metrics
+                    'market_cap': info.get('marketCap', 0),
+                    'volume': info.get('volume', 0),
+                    'avg_volume': info.get('averageVolume', 0),
+                    
+                    # Valuation metrics
+                    'pe_ratio': info.get('trailingPE'),
+                    'forward_pe': info.get('forwardPE'),
+                    'peg_ratio': info.get('pegRatio'),  # NEW: PEG ratio from yfinance
+                    
+                    # Profitability
+                    'roe': info.get('returnOnEquity'),
+                    'profit_margin': info.get('profitMargins'),
+                    'operating_margin': info.get('operatingMargins'),
+                    
+                    # Growth
+                    'revenue_growth': info.get('revenueGrowth'),
+                    'earnings_growth': info.get('earningsGrowth'),
+                    
+                    # Financial health
+                    'debt_to_equity': info.get('debtToEquity'),
+                    'current_ratio': info.get('currentRatio'),
+                    
+                    # Price
+                    'current_price': info.get('currentPrice') or info.get('regularMarketPrice'),
+                }
                 
-                # Profitability
-                'roe': info.get('returnOnEquity'),
-                'profit_margin': info.get('profitMargins'),
-                'operating_margin': info.get('operatingMargins'),
+                # Convert percentages to actual percentages
+                for key in ['roe', 'profit_margin', 'operating_margin', 'revenue_growth', 'earnings_growth']:
+                    if basic_data.get(key) is not None:
+                        basic_data[key] = basic_data[key] * 100
                 
-                # Growth
-                'revenue_growth': info.get('revenueGrowth'),
-                'earnings_growth': info.get('earningsGrowth'),
+                # Calculate PEG manually if not provided
+                if not basic_data.get('peg_ratio'):
+                    pe = basic_data.get('pe_ratio')
+                    earnings_growth = basic_data.get('earnings_growth')
+                    if pe and earnings_growth and earnings_growth > 0:
+                        basic_data['peg_ratio'] = pe / earnings_growth
                 
-                # Financial health
-                'debt_to_equity': info.get('debtToEquity'),
-                'current_ratio': info.get('currentRatio'),
+                return basic_data
                 
-                # Price
-                'current_price': info.get('currentPrice') or info.get('regularMarketPrice'),
-            }
-            
-            # Convert percentages to actual percentages
-            for key in ['roe', 'profit_margin', 'operating_margin', 'revenue_growth', 'earnings_growth']:
-                if basic_data.get(key) is not None:
-                    basic_data[key] = basic_data[key] * 100
-            
-            # Calculate PEG manually if not provided
-            if not basic_data.get('peg_ratio'):
-                pe = basic_data.get('pe_ratio')
-                earnings_growth = basic_data.get('earnings_growth')
-                if pe and earnings_growth and earnings_growth > 0:
-                    basic_data['peg_ratio'] = pe / earnings_growth
-            
-            return basic_data
-            
-        except Exception as e:
-            logger.debug(f"Error fetching {ticker}: {e}")
-            return None
+            except Exception as e:
+                error_str = str(e).lower()
+                
+                # Handle rate limiting specifically
+                if ('rate limit' in error_str or 
+                    'too many requests' in error_str or 
+                    '401' in error_str or
+                    'unauthorized' in error_str):
+                    
+                    if attempt < max_retries - 1:
+                        # Exponential backoff with jitter for rate limits
+                        delay = (1.5 ** attempt) + (ticker.__hash__() % 10) / 10
+                        time.sleep(delay)
+                        continue
+                    else:
+                        logger.debug(f"Rate limited: {ticker}")
+                        return None
+                
+                # Handle other errors
+                else:
+                    if attempt < max_retries - 1:
+                        time.sleep(0.2)
+                        continue
+                    else:
+                        logger.debug(f"Error fetching {ticker}: {e}")
+                        return None
+        
+        return None
     
     def apply_filters(self, stocks_data: Dict[str, Dict], filters: Dict) -> List[str]:
         """

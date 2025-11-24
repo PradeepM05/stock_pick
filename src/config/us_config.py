@@ -18,40 +18,56 @@ US_DATA_SOURCES = {
 # US MARKET FILTERS - HIDDEN GEMS FOCUS
 # =============================================================================
 US_FILTERS = {
-    # Market Cap - TEMPORARILY RELAXED for testing (will find some results)
-    'market_cap_min': 100_000_000,        # $100M (profitable small companies)
-    'market_cap_max': 100_000_000_000,    # $100B (include some large caps for testing)
+    # Market Cap - Quality-focused range
+    'market_cap_min': 500_000_000,        # $500M (higher minimum for quality)
+    'market_cap_max': 50_000_000_000,     # $50B (avoid mega-caps, focus on growth)
     
-    # Liquidity - Ensure tradeable but not overly popular
-    'volume_min': 100_000,                # Decent volume for liquidity
+    # Liquidity - Ensure tradeable
+    'volume_min': 200_000,                # Higher volume for US market liquidity
     
-    # Value - Use PEG ratio with smart fallbacks
-    'peg_ratio_max': 2.0,                 # More lenient PEG for testing
-    'pe_ratio_max_fallback': 25,          # Fallback P/E when no growth data
-    'pe_ratio_min': 1,                    # Must be profitable (no losses)
-    'roe_min': 8,                         # Relaxed ROE for testing
+    # Value - Quality-first requirements
+    'peg_ratio_max': 1.5,                 # More selective PEG (was 2.0)
+    'pe_ratio_max_fallback': 22,          # Lower P/E for US (was 25)
+    'pe_ratio_min': 1,                    # Must be profitable
+    'roe_min': 12,                        # Higher ROE requirement (was 8)
     
-    # Financial Health - RELAXED for testing
-    'debt_to_equity_max': 2.0,            # More lenient debt
-    'current_ratio_min': 0.8,             # Relaxed liquidity
-    'profit_margin_min': 2,               # Lower margin requirement
+    # Financial Health - Tighter for US market
+    'debt_to_equity_max': 1.5,            # Stricter debt (was 2.0)
+    'current_ratio_min': 1.0,             # Better liquidity (was 0.8)
+    'profit_margin_min': 5,               # Higher margins (was 2)
     
-    # Growth - RELAXED for testing  
-    'revenue_growth_min': -10,            # Allow some decline
-    'earnings_growth_min': -10,           # Allow some decline
+    # Growth - Quality growth requirements
+    'revenue_growth_min': 0,              # At least stable (was -10)
+    'earnings_growth_min': -5,            # Minor decline allowed (was -10)
     
-    # Price Action - Simple momentum check
-    'price_above_200ma': False,           # Don't require momentum (value focus)
+    # Price Action - Value focus maintained
+    'price_above_200ma': False,
     'price_above_50ma': False,
     
-    # Quality filters for hidden gems
-    'operating_margin_min': 5,            # Profitable operations
+    # Quality filters
+    'operating_margin_min': 8,            # Higher than India (was 5)
     
-    # Avoid hype sectors (can be enabled if desired)
-    'sectors_include': [],
-    'sectors_exclude': [],               # Keep all sectors but add anti-hype logic
+    # *** NEW: US-SPECIFIC QUALITY-FIRST CONTROLS ***
+    'quality_threshold': 75,              # Higher bar for US stocks
+    'min_portfolio_size': 25,             # Larger US portfolios
+    'max_portfolio_size': 45,             # More opportunities in US
     
-    # Country filters
+    # US-specific sector considerations
+    'us_sector_attractiveness': {
+        'Technology': 0.95,               # Slight discount (overvalued)
+        'Healthcare': 1.05,               # Defensive premium
+        'Industrials': 1.10,              # Infrastructure/reshoring
+        'Energy': 1.15,                   # Undervalued sector
+        'Financial Services': 1.00,       # Neutral (no concentration issue)
+        'Consumer Cyclical': 0.95,        # Economic uncertainty
+        'Basic Materials': 1.10,          # Commodity cycle
+        'Utilities': 1.05,                # Interest rate beneficiary
+        'Real Estate': 0.90,              # Rate sensitivity
+        'Communication Services': 0.95    # Mature sector
+    },
+    
+    # Exchange filters
+    'exchanges': ['NYSE', 'NASDAQ'],
     'countries': ['US']
 }
 

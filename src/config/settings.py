@@ -67,15 +67,15 @@ SECTOR_BENCHMARKS = {
         }
     },
     'Financial Services': {
-        'typical_pe': 12,
-        'typical_roe': 12,
-        'typical_debt_equity': 5.0,  # Banks have high leverage naturally
-        'typical_profit_margin': 25,
+        'typical_pe': 10,                    # More selective (was 12)
+        'typical_roe': 18,                   # Higher expectation (was 12)
+        'typical_debt_equity': 8.0,          # Stricter scoring (was 5.0)
+        'typical_profit_margin': 30,         # Higher expectation (was 25)
         'growth_focused': False,
         'weights': {
-            'growth': 0.20,
-            'profitability': 0.50,  # Emphasize profitability
-            'valuation': 0.30
+            'growth': 0.25,                  # Increased from 0.20
+            'profitability': 0.40,           # Reduced from 0.50
+            'valuation': 0.35                # Increased from 0.30
         }
     },
     'Healthcare': {
@@ -192,6 +192,139 @@ SECTOR_BENCHMARKS = {
         'typical_roe': 15,
         'typical_debt_equity': 1.0,
         'typical_profit_margin': 10,
+        'growth_focused': False,
+        'weights': {
+            'growth': 0.30,
+            'profitability': 0.35,
+            'valuation': 0.35
+        }
+    },
+    
+    # *** ADDITIONAL MAJOR SECTORS ***
+    
+    'Auto Manufacturers': {
+        'typical_pe': 15,
+        'typical_roe': 12,
+        'typical_debt_equity': 1.5,
+        'typical_profit_margin': 8,
+        'growth_focused': False,
+        'weights': {
+            'growth': 0.30,
+            'profitability': 0.35,
+            'valuation': 0.35
+        }
+    },
+    
+    'Aerospace & Defense': {
+        'typical_pe': 18,
+        'typical_roe': 15,
+        'typical_debt_equity': 1.0,
+        'typical_profit_margin': 12,
+        'growth_focused': False,
+        'weights': {
+            'growth': 0.25,
+            'profitability': 0.40,
+            'valuation': 0.35
+        }
+    },
+    
+    'Asset Management': {
+        'typical_pe': 20,
+        'typical_roe': 25,
+        'typical_debt_equity': 0.3,
+        'typical_profit_margin': 35,
+        'growth_focused': True,
+        'weights': {
+            'growth': 0.35,
+            'profitability': 0.45,
+            'valuation': 0.20
+        }
+    },
+    
+    'Capital Markets': {
+        'typical_pe': 15,
+        'typical_roe': 20,
+        'typical_debt_equity': 2.0,
+        'typical_profit_margin': 30,
+        'growth_focused': True,
+        'weights': {
+            'growth': 0.40,
+            'profitability': 0.40,
+            'valuation': 0.20
+        }
+    },
+    
+    'Engineering & Construction': {
+        'typical_pe': 12,
+        'typical_roe': 10,
+        'typical_debt_equity': 1.8,
+        'typical_profit_margin': 6,
+        'growth_focused': False,
+        'weights': {
+            'growth': 0.25,
+            'profitability': 0.35,
+            'valuation': 0.40
+        }
+    },
+    
+    'Specialty Industrial Machinery': {
+        'typical_pe': 16,
+        'typical_roe': 14,
+        'typical_debt_equity': 1.2,
+        'typical_profit_margin': 10,
+        'growth_focused': False,
+        'weights': {
+            'growth': 0.30,
+            'profitability': 0.35,
+            'valuation': 0.35
+        }
+    },
+    
+    'Aluminum': {
+        'typical_pe': 12,
+        'typical_roe': 8,
+        'typical_debt_equity': 1.5,
+        'typical_profit_margin': 10,
+        'growth_focused': False,
+        'weights': {
+            'growth': 0.20,
+            'profitability': 0.35,
+            'valuation': 0.45
+        }
+    },
+    
+    'Drug Manufacturers - Specialty & Generic': {
+        'typical_pe': 22,
+        'typical_roe': 18,
+        'typical_debt_equity': 0.6,
+        'typical_profit_margin': 15,
+        'growth_focused': True,
+        'weights': {
+            'growth': 0.40,
+            'profitability': 0.35,
+            'valuation': 0.25
+        }
+    },
+    
+    'Banks - Regional': {
+        'typical_pe': 10,
+        'typical_roe': 15,
+        'typical_debt_equity': 10.0,  # High leverage for banks
+        'typical_profit_margin': 25,
+        'growth_focused': False,
+        'weights': {
+            'growth': 0.20,
+            'profitability': 0.45,
+            'valuation': 0.35
+        }
+    },
+    
+    # Catch-all for any industry/sector variations
+    'Others': {
+        'typical_pe': 18,
+        'typical_roe': 12,
+        'typical_debt_equity': 1.2,
+        'typical_profit_margin': 8,
         'growth_focused': False,
         'weights': {
             'growth': 0.30,
