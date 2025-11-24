@@ -108,174 +108,176 @@ def parse_csv_summary(csv_file):
 def create_email_body(market_results):
     """Create HTML email body with results for multiple markets"""
     
+    current_date = datetime.now().strftime('%B %d, %Y')
+    
     html = """
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
         <style>
-            body {
+            body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 margin: 0;
                 padding: 0;
                 background-color: #f5f5f5;
-            }
-            .container {
+            }}
+            .container {{
                 max-width: 900px;
                 margin: 0 auto;
                 background-color: #ffffff;
-            }
-            .header {
+            }}
+            .header {{
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
                 padding: 40px 20px;
                 text-align: center;
-            }
-            .header h1 {
+            }}
+            .header h1 {{
                 margin: 0;
                 font-size: 28px;
                 font-weight: 600;
-            }
-            .header p {
+            }}
+            .header p {{
                 margin: 10px 0 0 0;
                 font-size: 14px;
                 opacity: 0.9;
-            }
-            .market-section {
+            }}
+            .market-section {{
                 padding: 30px 20px;
                 border-bottom: 1px solid #eee;
-            }
-            .market-section:last-child {
+            }}
+            .market-section:last-child {{
                 border-bottom: none;
-            }
-            .market-title {
+            }}
+            .market-title {{
                 font-size: 20px;
                 font-weight: 600;
                 margin: 0 0 20px 0;
                 display: flex;
                 align-items: center;
-            }
-            .market-title span {
+            }}
+            .market-title span {{
                 margin-right: 10px;
                 font-size: 24px;
-            }
-            .no-results {
+            }}
+            .no-results {{
                 color: #999;
                 text-align: center;
                 padding: 20px;
                 background-color: #f9f9f9;
                 border-radius: 5px;
-            }
-            .summary-cards {
+            }}
+            .summary-cards {{
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
                 gap: 15px;
                 margin-bottom: 25px;
-            }
-            .card {
+            }}
+            .card {{
                 background-color: #f9f9f9;
                 padding: 15px;
                 border-radius: 8px;
                 text-align: center;
                 border-left: 4px solid #667eea;
-            }
-            .card.strong-buy {
+            }}
+            .card.strong-buy {{
                 border-left-color: #00a86b;
-            }
-            .card.buy {
+            }}
+            .card.buy {{
                 border-left-color: #ffa500;
-            }
-            .card.speculative {
+            }}
+            .card.speculative {{
                 border-left-color: #dc3545;
-            }
-            .card.total {
+            }}
+            .card.total {{
                 border-left-color: #667eea;
-            }
-            .card-value {
+            }}
+            .card-value {{
                 font-size: 28px;
                 font-weight: 700;
                 margin: 10px 0;
-            }
-            .card-label {
+            }}
+            .card-label {{
                 font-size: 12px;
                 color: #666;
                 text-transform: uppercase;
                 letter-spacing: 1px;
-            }
-            .stocks-table {
+            }}
+            .stocks-table {{
                 width: 100%;
                 border-collapse: collapse;
                 margin-top: 15px;
-            }
-            .stocks-table thead {
+            }}
+            .stocks-table thead {{
                 background-color: #f9f9f9;
-            }
-            .stocks-table th {
+            }}
+            .stocks-table th {{
                 padding: 12px;
                 text-align: left;
                 font-weight: 600;
                 font-size: 12px;
                 color: #333;
                 border-bottom: 2px solid #ddd;
-            }
-            .stocks-table td {
+            }}
+            .stocks-table td {{
                 padding: 12px;
                 border-bottom: 1px solid #eee;
                 font-size: 13px;
-            }
-            .stocks-table tr:hover {
+            }}
+            .stocks-table tr:hover {{
                 background-color: #f9f9f9;
-            }
-            .rank {
+            }}
+            .rank {{
                 font-weight: 600;
                 color: #667eea;
-            }
-            .ticker {
+            }}
+            .ticker {{
                 font-weight: 600;
                 color: #333;
-            }
-            .strong-buy-badge {
+            }}
+            .strong-buy-badge {{
                 background-color: #00a86b;
                 color: white;
                 padding: 4px 8px;
                 border-radius: 4px;
                 font-size: 11px;
                 font-weight: 600;
-            }
-            .buy-badge {
+            }}
+            .buy-badge {{
                 background-color: #ffa500;
                 color: white;
                 padding: 4px 8px;
                 border-radius: 4px;
                 font-size: 11px;
                 font-weight: 600;
-            }
-            .watch-badge {
+            }}
+            .watch-badge {{
                 background-color: #dc3545;
                 color: white;
                 padding: 4px 8px;
                 border-radius: 4px;
                 font-size: 11px;
                 font-weight: 600;
-            }
-            .footer {
+            }}
+            .footer {{
                 padding: 20px;
                 text-align: center;
                 color: #999;
                 font-size: 12px;
                 background-color: #f9f9f9;
-            }
-            @media (max-width: 600px) {
-                .summary-cards {
+            }}
+            @media (max-width: 600px) {{
+                .summary-cards {{
                     grid-template-columns: repeat(2, 1fr);
-                }
-                .stocks-table {
+                }}
+                .stocks-table {{
                     font-size: 12px;
-                }
-                .stocks-table th, .stocks-table td {
+                }}
+                .stocks-table th, .stocks-table td {{
                     padding: 8px;
-                }
-            }
+                }}
+            }}
         </style>
     </head>
     <body>
@@ -284,7 +286,7 @@ def create_email_body(market_results):
                 <h1>📊 Daily Hidden Gems Report</h1>
                 <p>{}</p>
             </div>
-    """.format(datetime.now().strftime('%B %d, %Y'))
+    """.format(current_date)
     
     # Add market sections
     for market, summary in market_results.items():
