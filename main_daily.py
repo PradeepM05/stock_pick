@@ -105,81 +105,261 @@ def parse_csv_summary(csv_file):
         return None
 
 
-def create_email_body(market, summary):
-    """Create HTML email body with results"""
-    if not summary:
-        return f"""
-        <h2>📊 Stock Screener - {market} Market</h2>
-        <p><strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p>⚠️ Screening completed but no results generated or CSV parsing failed.</p>
-        """
+def create_email_body(market_results):
+    """Create HTML email body with results for multiple markets"""
     
-    html = f"""
+    html = """
+    <!DOCTYPE html>
     <html>
     <head>
+        <meta charset="UTF-8">
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            h2 {{ color: #333; }}
-            .summary {{ background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; }}
-            table {{ border-collapse: collapse; width: 100%; margin: 15px 0; }}
-            th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
-            th {{ background-color: #4CAF50; color: white; }}
-            .strong-buy {{ color: #00aa00; font-weight: bold; }}
-            .buy {{ color: #0066cc; font-weight: bold; }}
-            .watch {{ color: #ff9900; }}
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f5f5f5;
+            }
+            .container {
+                max-width: 900px;
+                margin: 0 auto;
+                background-color: #ffffff;
+            }
+            .header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 40px 20px;
+                text-align: center;
+            }
+            .header h1 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: 600;
+            }
+            .header p {
+                margin: 10px 0 0 0;
+                font-size: 14px;
+                opacity: 0.9;
+            }
+            .market-section {
+                padding: 30px 20px;
+                border-bottom: 1px solid #eee;
+            }
+            .market-section:last-child {
+                border-bottom: none;
+            }
+            .market-title {
+                font-size: 20px;
+                font-weight: 600;
+                margin: 0 0 20px 0;
+                display: flex;
+                align-items: center;
+            }
+            .market-title span {
+                margin-right: 10px;
+                font-size: 24px;
+            }
+            .no-results {
+                color: #999;
+                text-align: center;
+                padding: 20px;
+                background-color: #f9f9f9;
+                border-radius: 5px;
+            }
+            .summary-cards {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px;
+                margin-bottom: 25px;
+            }
+            .card {
+                background-color: #f9f9f9;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+                border-left: 4px solid #667eea;
+            }
+            .card.strong-buy {
+                border-left-color: #00a86b;
+            }
+            .card.buy {
+                border-left-color: #ffa500;
+            }
+            .card.speculative {
+                border-left-color: #dc3545;
+            }
+            .card.total {
+                border-left-color: #667eea;
+            }
+            .card-value {
+                font-size: 28px;
+                font-weight: 700;
+                margin: 10px 0;
+            }
+            .card-label {
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .stocks-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+            }
+            .stocks-table thead {
+                background-color: #f9f9f9;
+            }
+            .stocks-table th {
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                font-size: 12px;
+                color: #333;
+                border-bottom: 2px solid #ddd;
+            }
+            .stocks-table td {
+                padding: 12px;
+                border-bottom: 1px solid #eee;
+                font-size: 13px;
+            }
+            .stocks-table tr:hover {
+                background-color: #f9f9f9;
+            }
+            .rank {
+                font-weight: 600;
+                color: #667eea;
+            }
+            .ticker {
+                font-weight: 600;
+                color: #333;
+            }
+            .strong-buy-badge {
+                background-color: #00a86b;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            .buy-badge {
+                background-color: #ffa500;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            .watch-badge {
+                background-color: #dc3545;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            .footer {
+                padding: 20px;
+                text-align: center;
+                color: #999;
+                font-size: 12px;
+                background-color: #f9f9f9;
+            }
+            @media (max-width: 600px) {
+                .summary-cards {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .stocks-table {
+                    font-size: 12px;
+                }
+                .stocks-table th, .stocks-table td {
+                    padding: 8px;
+                }
+            }
         </style>
     </head>
     <body>
-        <h2>📊 Daily Stock Screener - {market} Market</h2>
-        <p><strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        
-        <div class="summary">
-            <h3>📈 Summary</h3>
-            <ul>
-                <li><strong>Total Stocks:</strong> {summary['total']}</li>
-                <li><span class="strong-buy">STRONG_BUY: {summary['strong_buy']}</span></li>
-                <li><span class="buy">BUY: {summary['buy']}</span></li>
-                <li><span class="watch">WATCH: {summary['watch']}</span></li>
-            </ul>
-            <p>
-                <strong>Metrics:</strong><br>
-                Avg P/E: {summary['avg_pe']:.2f} | Avg ROE: {summary['avg_roe']:.2f}%
-            </p>
-        </div>
-        
-        <h3>🏆 Top 10 Stocks</h3>
-        <table>
-            <tr>
-                <th>Rank</th>
-                <th>Ticker</th>
-                <th>Company</th>
-                <th>Action</th>
-                <th>Score</th>
-                <th>P/E</th>
-                <th>ROE</th>
-            </tr>
-    """
+        <div class="container">
+            <div class="header">
+                <h1>📊 Daily Hidden Gems Report</h1>
+                <p>{}</p>
+            </div>
+    """.format(datetime.now().strftime('%B %d, %Y'))
     
-    for idx, row in summary['stocks'].iterrows():
-        action_class = 'strong-buy' if row['Action'] == 'STRONG_BUY' else 'buy' if row['Action'] == 'BUY' else 'watch'
-        html += f"""
-            <tr>
-                <td>{idx + 1}</td>
-                <td><strong>{row['Ticker']}</strong></td>
-                <td>{row['Company']}</td>
-                <td class="{action_class}">{row['Action']}</td>
-                <td>{row['Composite_Score']:.1f}</td>
-                <td>{row['PE_Ratio']}</td>
-                <td>{row['ROE_%']}</td>
-            </tr>
-        """
+    # Add market sections
+    for market, summary in market_results.items():
+        if market == 'US':
+            market_flag = '🇺🇸 US Market'
+        elif market == 'INDIA':
+            market_flag = '🇮🇳 India Market'
+        else:
+            market_flag = market
+        
+        html += f'<div class="market-section"><h2 class="market-title"><span>{market_flag.split()[0]}</span>{market_flag.split(maxsplit=1)[1]}</h2>'
+        
+        if not summary:
+            html += '<div class="no-results">No results available for this market today.</div>'
+        else:
+            # Summary cards
+            html += '<div class="summary-cards">'
+            html += f'<div class="card strong-buy"><div class="card-value">{summary.get("strong_buy", 0)}</div><div class="card-label">Strong Buy</div></div>'
+            html += f'<div class="card buy"><div class="card-value">{summary.get("buy", 0)}</div><div class="card-label">Buy</div></div>'
+            html += f'<div class="card speculative"><div class="card-value">{summary.get("watch", 0)}</div><div class="card-label">Speculative</div></div>'
+            html += f'<div class="card total"><div class="card-value">{summary.get("total", 0)}</div><div class="card-label">Total Analyzed</div></div>'
+            html += '</div>'
+            
+            # Stocks table
+            html += """
+            <table class="stocks-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Ticker</th>
+                        <th>Company</th>
+                        <th>Price</th>
+                        <th>P/E</th>
+                        <th>ROE</th>
+                        <th>Score</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            
+            for idx, row in summary['stocks'].iterrows():
+                if row['Action'] == 'STRONG_BUY':
+                    badge = f'<span class="strong-buy-badge">{row["Action"]}</span>'
+                elif row['Action'] == 'BUY':
+                    badge = f'<span class="buy-badge">{row["Action"]}</span>'
+                else:
+                    badge = f'<span class="watch-badge">{row["Action"]}</span>'
+                
+                html += f"""
+                    <tr>
+                        <td class="rank">{idx + 1}</td>
+                        <td class="ticker">{row['Ticker']}</td>
+                        <td>{row['Company']}</td>
+                        <td>{row.get('Market_Price', 'N/A')}</td>
+                        <td>{row['PE_Ratio']}</td>
+                        <td>{row['ROE_%']}</td>
+                        <td><strong>{row['Composite_Score']:.1f}</strong></td>
+                        <td>{badge}</td>
+                    </tr>
+                """
+            
+            html += """
+                </tbody>
+            </table>
+            """
+        
+        html += '</div>'
     
     html += """
-        </table>
-        
-        <p style="color: #666; font-size: 12px;">
-            <em>Full results CSV attached. For more details, visit the GitHub repository.</em>
-        </p>
+        <div class="footer">
+            <p>This is an automated report from your Daily Hidden Gems Stock Screener.<br>
+            Full CSV results are available in the repository. For more information, visit the GitHub repository.</p>
+        </div>
+        </div>
     </body>
     </html>
     """
@@ -214,48 +394,53 @@ def main():
     logger.info(f"🚀 Starting daily screening: {args.market} market")
     
     try:
-        # Build main.py command
-        cmd = ['python', 'main.py', '--market', args.market]
-        if args.no_cache:
-            cmd.append('--no-cache')
+        # Determine markets to screen
+        markets_to_screen = ['US', 'INDIA'] if args.market == 'BOTH' else [args.market]
+        market_results = {}
         
-        # Run main screener
-        logger.info(f"Running: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=False, text=True)
+        for market in markets_to_screen:
+            # Build main.py command
+            cmd = ['python', 'main.py', '--market', market]
+            if args.no_cache:
+                cmd.append('--no-cache')
+            
+            # Run main screener
+            logger.info(f"Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=False, text=True)
+            
+            if result.returncode != 0:
+                logger.error(f"❌ Screening for {market} failed with exit code {result.returncode}")
+                market_results[market] = None
+                continue
+            
+            logger.info(f"✓ Screening for {market} completed successfully")
+            
+            # Get latest CSV
+            csv_file = get_latest_csv('output', market)
+            if csv_file:
+                logger.info(f"Found results: {csv_file}")
+                summary = parse_csv_summary(csv_file)
+                if summary:
+                    market_results[market] = summary
+                else:
+                    logger.warning(f"Could not parse CSV for {market}")
+                    market_results[market] = None
+            else:
+                logger.warning(f"No CSV file found for {market}")
+                market_results[market] = None
         
-        if result.returncode != 0:
-            logger.error(f"❌ Screening failed with exit code {result.returncode}")
-            if args.send_email:
-                send_email_report(
-                    subject=f"❌ Stock Screener Failed - {args.market} Market",
-                    body=f"<p>The screening process failed. Please check the GitHub Actions logs for details.</p>"
-                )
-            sys.exit(1)
-        
-        logger.info("✓ Screening completed successfully")
+        logger.info("✓ All screening completed")
         
         # Send email if requested
         if args.send_email:
             logger.info("📧 Preparing email report...")
+            email_body = create_email_body(market_results)
             
-            # Find latest CSV
-            csv_file = get_latest_csv('output', args.market)
-            if csv_file:
-                logger.info(f"Found results: {csv_file}")
-                
-                # Parse summary
-                summary = parse_csv_summary(csv_file)
-                if summary:
-                    # Create email body
-                    email_body = create_email_body(args.market, summary)
-                    
-                    # Send email
-                    subject = f"📈 Daily Stock Picks - {args.market} Market ({datetime.now().strftime('%Y-%m-%d')})"
-                    send_email_report(subject, email_body, csv_file)
-                else:
-                    logger.warning("Could not parse CSV for email")
-            else:
-                logger.warning("No CSV file found to attach")
+            # Find CSV file to attach (prefer US if available, otherwise INDIA)
+            csv_file = get_latest_csv('output', 'US') or get_latest_csv('output', 'INDIA')
+            
+            subject = f"📊 Daily Hidden Gems Report - {datetime.now().strftime('%B %d, %Y')}"
+            send_email_report(subject, email_body, csv_file)
     
     except Exception as e:
         logger.error(f"❌ Error: {e}")
