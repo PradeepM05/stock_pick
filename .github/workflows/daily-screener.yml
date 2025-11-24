@@ -92,7 +92,10 @@ jobs:
     - name: Run stock screening
       run: |
         MARKET="${{ github.event.inputs.market || steps.market-time.outputs.market }}"
-        SEND_EMAIL="${{ github.event.inputs.send_email || 'true' }}"
+        SEND_EMAIL="${{ github.event.inputs.send_email || 'false' }}"
+        
+        echo "Market: $MARKET"
+        echo "Send Email: $SEND_EMAIL"
         
         if [ "$SEND_EMAIL" = "true" ]; then
           python main_daily.py --market $MARKET --send-email --no-cache
@@ -119,26 +122,29 @@ jobs:
         echo "**Market:** ${{ github.event.inputs.market || steps.market-time.outputs.market }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        if [ -d "output" ] && [ "$(ls -A output/daily_gems_*.csv 2>/dev/null)" ]; then
-          echo "### 📁 Generated Files:" >> $GITHUB_STEP_SUMMARY
-          for file in output/daily_gems_*.csv; do
-            if [ -f "$file" ]; then
-              lines=$(wc -l < "$file")
-              echo "- \`$(basename $file)\` ($(($lines - 1)) stocks)" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
+        if [ -d "output" ]; then
+          CSV_FILES=$(find output -name "stock_picks_*.csv" 2>/dev/null | head -5)
+          if [ -n "$CSV_FILES" ]; then
+            echo "### 📁 Generated Files:" >> $GITHUB_STEP_SUMMARY
+            for file in $CSV_FILES; do
+              lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+              echo "- \`$(basename $file)\` ($((lines - 1)) stocks)" >> $GITHUB_STEP_SUMMARY
+            done
+          else
+            echo "### ⚠️ No CSV output files generated" >> $GITHUB_STEP_SUMMARY
+          fi
         else
-          echo "### ⚠️ No output files generated" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚠️ Output directory not found" >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📊 Latest Log Entries:" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        if [ -f logs/*.log ]; then
-          tail -20 logs/*.log | head -10 >> $GITHUB_STEP_SUMMARY
+        if [ -d "logs" ]; then
+          tail -20 logs/*.log 2>/dev/null || echo "No log files found"
         else
-          echo "No log files found" >> $GITHUB_STEP_SUMMARY
-        fi
+          echo "Logs directory not found"
+        fi >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         
     - name: Notify on failure
