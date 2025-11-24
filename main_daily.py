@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'src'))
 from src.utils import setup_logger, load_env_vars
 
 
-def send_email_report(subject, body, csv_file=None):
+def send_email_report(subject, body, csv_file=None, logger=None):
     """Send email report with results"""
     try:
         env_vars = load_env_vars()
@@ -27,8 +27,23 @@ def send_email_report(subject, body, csv_file=None):
         sender_password = env_vars.get('sender_password')
         recipients = env_vars.get('report_recipients', '').split(',')
         
-        if not sender_email or not sender_password or not recipients:
-            print("❌ Email credentials not configured in .env")
+        if logger:
+            logger.info(f"Email config - Sender: {sender_email}, Recipients: {recipients}")
+        
+        if not sender_email or not sender_password:
+            msg = "❌ Email credentials not configured in .env"
+            if logger:
+                logger.error(msg)
+            else:
+                print(msg)
+            return False
+        
+        if not any(r.strip() for r in recipients):
+            msg = "❌ No recipients configured in .env"
+            if logger:
+                logger.error(msg)
+            else:
+                print(msg)
             return False
         
         # Create email
@@ -37,11 +52,16 @@ def send_email_report(subject, body, csv_file=None):
         msg['To'] = ', '.join([r.strip() for r in recipients if r.strip()])
         msg['Subject'] = subject
         
+        if logger:
+            logger.info(f"Creating email - Subject: {subject}, To: {msg['To']}")
+        
         # Add body
         msg.attach(MIMEText(body, 'html'))
         
         # Attach CSV if provided
         if csv_file and os.path.exists(csv_file):
+            if logger:
+                logger.info(f"Attaching CSV: {csv_file}")
             with open(csv_file, 'rb') as attachment:
                 msg.add_attachment(
                     attachment.read(),
@@ -51,16 +71,30 @@ def send_email_report(subject, body, csv_file=None):
                 )
         
         # Send email
+        if logger:
+            logger.info("Connecting to smtp.gmail.com:587...")
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
             server.login(sender_email, sender_password)
             server.send_message(msg)
         
-        print(f"✓ Email sent to {msg['To']}")
+        success_msg = f"✓ Email sent to {msg['To']}"
+        if logger:
+            logger.info(success_msg)
+        else:
+            print(success_msg)
         return True
         
     except Exception as e:
-        print(f"❌ Error sending email: {e}")
+        error_msg = f"❌ Error sending email: {e}"
+        if logger:
+            logger.error(error_msg)
+            import traceback
+            logger.error(traceback.format_exc())
+        else:
+            print(error_msg)
+            import traceback
+            traceback.print_exc()
         return False
 
 
@@ -436,13 +470,21 @@ def main():
         # Send email if requested
         if args.send_email:
             logger.info("📧 Preparing email report...")
-            email_body = create_email_body(market_results)
-            
-            # Find CSV file to attach (prefer US if available, otherwise INDIA)
-            csv_file = get_latest_csv('output', 'US') or get_latest_csv('output', 'INDIA')
-            
-            subject = f"📊 Daily Hidden Gems Report - {datetime.now().strftime('%B %d, %Y')}"
-            send_email_report(subject, email_body, csv_file)
+            try:
+                email_body = create_email_body(market_results)
+                logger.info("✓ Email body generated successfully")
+                
+                # Find CSV file to attach (prefer US if available, otherwise INDIA)
+                csv_file = get_latest_csv('output', 'US') or get_latest_csv('output', 'INDIA')
+                logger.info(f"CSV file to attach: {csv_file}")
+                
+                subject = f"📊 Daily Hidden Gems Report - {datetime.now().strftime('%B %d, %Y')}"
+                logger.info(f"Sending email with subject: {subject}")
+                send_email_report(subject, email_body, csv_file, logger=logger)
+            except Exception as e:
+                logger.error(f"❌ Error preparing email: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
     
     except Exception as e:
         logger.error(f"❌ Error: {e}")
