@@ -26,7 +26,10 @@ def load_env_vars() -> Dict[str, str]:
         'default_market': os.getenv('DEFAULT_MARKET', 'US'),
         'enable_cache': os.getenv('ENABLE_CACHE', 'true').lower() == 'true',
         'cache_duration': int(os.getenv('CACHE_DURATION_HOURS', '24')),
-        'log_level': os.getenv('LOG_LEVEL', 'INFO')
+        'log_level': os.getenv('LOG_LEVEL', 'INFO'),
+        'sender_email': os.getenv('SENDER_EMAIL'),
+        'sender_password': os.getenv('SENDER_PASSWORD'),
+        'report_recipients': os.getenv('REPORT_RECIPIENTS')
     }
 
 
