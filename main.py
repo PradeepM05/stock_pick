@@ -90,16 +90,28 @@ def main():
         logger.info("Clearing cache...")
         cache_manager.clear(market=args.market if args.market != 'BOTH' else None)
     
+    # Determine which markets to screen
+    markets_to_screen = ['US', 'INDIA'] if args.market == 'BOTH' else [args.market]
+    
+    # Run screening for each market
+    for market in markets_to_screen:
+        logger.info(f"\n{'=' * 70}")
+        logger.info(f"SCREENING {market} MARKET")
+        logger.info('=' * 70)
+        run_screening(market, args, logger, cache_manager, api_key)
+def run_screening(market, args, logger, cache_manager, api_key):
+    """Run screening for a specific market"""
+    
     # Get market configuration
-    market_config = get_market_config(args.market)
+    market_config = get_market_config(market)
     
     # STEP 1: Screen stocks (get ticker list)
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"STEP 1: FETCHING {args.market} STOCK LIST")
+    logger.info(f"STEP 1: FETCHING {market} STOCK LIST")
     logger.info('=' * 70)
     
     screener = create_screener(
-        market=args.market,
+        market=market,
         filters=market_config['filters'],
         cache_manager=cache_manager,
         api_key=api_key
@@ -292,7 +304,7 @@ def main():
     logger.info('=' * 70)
     
     if top_stocks:
-        save_results_to_csv(top_stocks, args.market, logger)
+        save_results_to_csv(top_stocks, market, logger)
     else:
         logger.warning("No results to save")
     
@@ -318,6 +330,88 @@ def main():
         logger.info(f"   Average ROE: {avg_roe:.1f}%") 
         logger.info(f"   Average Market Cap: ${avg_mcap:.0f}M")
         logger.info(f"   Sectors: {', '.join(set(s.get('sector', 'Unknown') for s in top_stocks))}")
+
+
+def main():
+    """Main function with full analysis pipeline"""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Stock Screener with Full Analysis')
+    parser.add_argument(
+        '--market',
+        type=str,
+        choices=['US', 'INDIA', 'BOTH'],
+        default='US',
+        help='Market to screen (default: US)'
+    )
+    parser.add_argument(
+        '--no-cache',
+        action='store_true',
+        help='Disable cache and fetch fresh data'
+    )
+    parser.add_argument(
+        '--clear-cache',
+        action='store_true',
+        help='Clear cache before running'
+    )
+    parser.add_argument(
+        '--log-level',
+        type=str,
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+        default='INFO',
+        help='Logging level (default: INFO)'
+    )
+    parser.add_argument(
+        '--min-stocks',
+        type=int,
+        default=20,
+        help='Minimum portfolio size (default: 20, will expand based on opportunities)'
+    )
+    parser.add_argument(
+        '--max-stocks',
+        type=int,
+        default=40,
+        help='Maximum portfolio size (default: 40, contracts if few quality opportunities)'
+    )
+    parser.add_argument(
+        '--analyze-all',
+        action='store_true',
+        help='Analyze all stocks (default: analyze top-n only)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Setup logger
+    logger = setup_logger(level=args.log_level)
+    logger.info("=" * 70)
+    logger.info("STOCK SCREENER v2.0 - WITH FULL ANALYSIS")
+    logger.info("=" * 70)
+    
+    # Load environment variables
+    env_vars = load_env_vars()
+    api_key = env_vars.get('yahoo_api_key')
+    
+    if not api_key:
+        logger.warning("WARNING: No Yahoo Finance API key found")
+        logger.warning("   Set YAHOO_FINANCE_API_KEY in .env file for full functionality")
+        logger.info("   Continuing with FREE data sources...")
+    
+    # Initialize cache manager
+    cache_manager = CacheManager(CACHE_DIR)
+    
+    # Clear cache if requested
+    if args.clear_cache:
+        logger.info("Clearing cache...")
+        cache_manager.clear(market=args.market if args.market != 'BOTH' else None)
+    
+    # Determine which markets to screen
+    markets_to_screen = ['US', 'INDIA'] if args.market == 'BOTH' else [args.market]
+    
+    # Run screening for each market
+    for market in markets_to_screen:
+        logger.info(f"\n{'=' * 70}")
+        logger.info(f"SCREENING {market} MARKET")
+        logger.info('=' * 70)
+        run_screening(market, args, logger, cache_manager, api_key)
 
 
 
