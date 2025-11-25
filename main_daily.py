@@ -329,17 +329,15 @@ def create_email_body(market_results):
                 border-radius: 5px;
             }}
             .summary-cards {{
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                display: flex;
+                justify-content: space-between;
                 gap: 15px;
                 margin-bottom: 25px;
+                flex-wrap: wrap;
             }}
             .card {{
-                background-color: #f9f9f9;
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-                border-left: 4px solid #667eea;
+                flex: 1;
+                min-width: 120px;
             }}
             .card.strong-buy {{
                 border-left-color: #00a86b;
