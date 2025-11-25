@@ -13,6 +13,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
 import os
+from email.mime.base import MIMEBase
+from email import encoders
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
@@ -93,12 +95,15 @@ def send_email_report(subject, body, csv_file=None, logger=None):
             if logger:
                 logger.info(f"Attaching CSV: {csv_file}")
             with open(csv_file, 'rb') as attachment:
-                msg.add_attachment(
-                    attachment.read(),
-                    maintype='text',
-                    subtype='csv',
-                    filename=os.path.basename(csv_file)
-                )
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment.read())
+                
+            encoders.encode_base64(part)
+            part.add_header(
+                'Content-Disposition',
+                f'attachment; filename="{os.path.basename(csv_file)}"'
+            )
+            msg.attach(part)
         elif csv_file:
             if logger:
                 logger.warning(f"CSV file not found for attachment: {csv_file}")
