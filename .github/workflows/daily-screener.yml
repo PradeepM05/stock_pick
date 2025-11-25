@@ -57,7 +57,7 @@ jobs:
     - name: Create environment file
       run: |
         echo "# Environment variables for GitHub Actions" > .env
-        echo "YAHOO_FINANCE_API_KEY='${{ secrets.YAHOO_FINANCE_API_KEY }}'" >> .env
+        echo "YAHOO_FINANCE_API_KEY=${{ secrets.YAHOO_FINANCE_API_KEY }}" >> .env
         echo "SENDER_EMAIL=${{ secrets.SENDER_EMAIL }}" >> .env
         echo "SENDER_PASSWORD=${{ secrets.SENDER_PASSWORD }}" >> .env
         echo "REPORT_RECIPIENTS=${{ secrets.REPORT_RECIPIENTS }}" >> .env
